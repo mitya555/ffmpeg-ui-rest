@@ -230,3 +230,182 @@ composer install
 cd <your project>
 composer require 'jacwright/restserver:dev-master'
 ```
+
+## ffmpeg-ui-rest on Mac OS
+
+```bash
+# install xcode command-line tools
+xcode-select --install
+# install brew
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
+brew update
+# install nginx
+brew tap homebrew/nginx
+brew tap denji/nginx
+brew options nginx-full
+brew info nginx-full
+brew install nginx-full --with-rtmp-module
+nginx
+ps -ef|grep nginx|grep -v grep
+nginx -s stop
+# install php
+brew install php
+brew services start php
+ps -ef|grep php-fpm|grep -v grep
+lsof -Pni4 | grep LISTEN | grep -v grep
+brew services stop php
+pecl channel-update pecl.php.net
+pecl install apcu
+ 
+```
+
+/usr/local/etc/nginx/nginx.conf:
+```bash
+
+#user  nobody;
+worker_processes  1;
+
+#error_log  logs/error.log;
+#error_log  logs/error.log  notice;
+#error_log  logs/error.log  info;
+
+#pid        logs/nginx.pid;
+
+
+events {
+    worker_connections  1024;
+}
+
+
+rtmp {
+    server {
+        listen 1935;
+
+        application rtmp {
+            live on;
+        }
+    }
+}
+
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+
+    #log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+    #                  '$status $body_bytes_sent "$http_referer" '
+    #                  '"$http_user_agent" "$http_x_forwarded_for"';
+
+    #access_log  logs/access.log  main;
+
+    sendfile        on;
+    #tcp_nopush     on;
+
+    #keepalive_timeout  0;
+    keepalive_timeout  65;
+
+    #gzip  on;
+
+    server {
+        listen       8080;
+        server_name  localhost;
+
+        #charset koi8-r;
+
+        #access_log  logs/host.access.log  main;
+
+        location / {
+            root   html;
+            index  index.html index.htm;
+        }
+
+        #error_page  404              /404.html;
+
+        # redirect server error pages to the static page /50x.html
+        #
+        error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   html;
+        }
+
+        # proxy the PHP scripts to Apache listening on 127.0.0.1:80
+        #
+        #location ~ \.php$ {
+        #    proxy_pass   http://127.0.0.1;
+        #}
+
+        # pass the PHP scripts to FastCGI server listening on 127.0.0.1:9000
+        #
+        location ~ \.php$ {
+            root           html;
+            fastcgi_pass   127.0.0.1:9000;
+            fastcgi_index  index.php;
+        #    fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name;
+        #    include        fastcgi_params;
+            include        fastcgi.conf;
+        }
+
+        rewrite ^/rest/.* /rest/index.php;
+
+        # deny access to .htaccess files, if Apache's document root
+        # concurs with nginx's one
+        #
+        #location ~ /\.ht {
+        #    deny  all;
+        #}
+
+        # This URL provides RTMP statistics in XML
+        location /rtmp/stat {
+            rtmp_stat all;
+            # Use this stylesheet to view XML as web page in browser
+            #rtmp_stat_stylesheet stat.xsl;
+        }
+    }
+
+
+    # another virtual host using mix of IP-, name-, and port-based configuration
+    #
+    #server {
+    #    listen       8000;
+    #    listen       somename:8080;
+    #    server_name  somename  alias  another.alias;
+
+    #    location / {
+    #        root   html;
+    #        index  index.html index.htm;
+    #    }
+    #}
+
+
+    # HTTPS server
+    #
+    #server {
+    #    listen       443 ssl;
+    #    server_name  localhost;
+
+    #    ssl_certificate      cert.pem;
+    #    ssl_certificate_key  cert.key;
+
+    #    ssl_session_cache    shared:SSL:1m;
+    #    ssl_session_timeout  5m;
+
+    #    ssl_ciphers  HIGH:!aNULL:!MD5;
+    #    ssl_prefer_server_ciphers  on;
+
+    #    location / {
+    #        root   html;
+    #        index  index.html index.htm;
+    #    }
+    #}
+    include servers/*;
+}
+```
+
+/usr/local/var/www/phpinfo.php:
+```php
+<?php
+
+// Show all information, defaults to INFO_ALL
+phpinfo();
+
+?>
+```
