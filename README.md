@@ -252,7 +252,7 @@ nginx -s stop
 brew install php
 brew services start php
 ps -ef|grep php-fpm|grep -v grep
-lsof -Pni4 | grep LISTEN | grep -v grep
+lsof -Pni4|grep LISTEN|grep php-fpm|grep -v grep
 brew services stop php
 pecl channel-update pecl.php.net
 pecl install apcu

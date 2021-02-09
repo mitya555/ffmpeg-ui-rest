@@ -122,19 +122,19 @@ class RootController
 		$KEYNAME_PREFIX_LEN = strlen($KEYNAME_PREFIX);
 		if ($screen_name && $screen_id) {
 			$keyname = $KEYNAME_PREFIX . $screen_name;
-			if ($fp = fopen("/var/lib/php5/vchat.lock", "c")) {
+			if ($fp = fopen("/tmp/ffmpeg_ui_vchat.lock", "c")) {
 				$lock_ex = false;
 				try {
 					relock:
 					if (flock($fp, $lock_ex ? LOCK_EX : LOCK_SH)) {
-						$id = apc_fetch($keyname);
+						$id = apcu_fetch($keyname);
 						if ($id === $screen_id) {
 							// refresh cache
-							apc_store($keyname, $screen_id, $TTL);
+							apcu_store($keyname, $screen_id, $TTL);
 						} else if ($id === false) {
 							if ($lock_ex) {
 								// add new
-								apc_store($keyname, $screen_id, $TTL);
+								apcu_store($keyname, $screen_id, $TTL);
 							} else {
 								$lock_ex = true;
 								goto relock;
@@ -151,7 +151,7 @@ class RootController
 			}
 		}
 		$res = [];
-		foreach (new APCIterator('user', '/^' . $KEYNAME_PREFIX . '/') as $pair) {
+		foreach (new APCUIterator('/^' . $KEYNAME_PREFIX . '/') as $pair) {
 			$res[] = substr($pair['key'], $KEYNAME_PREFIX_LEN);
 		}
 		return $res;
@@ -189,24 +189,24 @@ class RootController
 		$KEYNAME_PREFIX_LEN = strlen($KEYNAME_PREFIX);
 		if ($data) {
 			retry:
-			$num = apc_inc('TCHAT_CURRENT_NUM');
+			$num = apcu_inc('TCHAT_CURRENT_NUM');
 			if ($num === false) {
 				$max = 0;
-				foreach (new APCIterator('user', '/^' . $KEYNAME_PREFIX . '/') as $pair) {
+				foreach (new APCUIterator('/^' . $KEYNAME_PREFIX . '/') as $pair) {
 					$num = substr($pair['key'], $KEYNAME_PREFIX_LEN);
 					if ($max < $num) {
 						$max = $num;
 					}
 				}
-				apc_store('TCHAT_CURRENT_NUM', $num = $max + 1);
+				apcu_store('TCHAT_CURRENT_NUM', $num = $max + 1);
 			}
 			$data->msec = round(microtime(true) * 1000);
 			$data->num = $num;
-			if (apc_add($KEYNAME_PREFIX . $num, $data, $TTL) === false) {
+			if (apcu_add($KEYNAME_PREFIX . $num, $data, $TTL) === false) {
 				goto retry;
 			}
 			$min = -1;
-			foreach (new APCIterator('user', '/^' . $KEYNAME_PREFIX . '/') as $pair) {
+			foreach (new APCUIterator('/^' . $KEYNAME_PREFIX . '/') as $pair) {
 				$tmp = substr($pair['key'], $KEYNAME_PREFIX_LEN);
 				if ($min > $tmp || $min < 0) {
 					$min = $tmp;
@@ -214,12 +214,12 @@ class RootController
 			}
 			if ($min >= 0) {
 				for ($i = $min; $i <= $num - 100; $i++) {
-					apc_delete($KEYNAME_PREFIX . $i);
+					apcu_delete($KEYNAME_PREFIX . $i);
 				}
 			}
 		}
 		$res = [];
-		foreach (new APCIterator('user', '/^' . $KEYNAME_PREFIX . '/') as $pair) {
+		foreach (new APCUIterator('/^' . $KEYNAME_PREFIX . '/') as $pair) {
 			$val = $pair['value'];
 			if (!$time_msec || !$item_num || $time_msec < $val->msec || 
 				($time_msec == $val->msec && $item_num < $val->num)) {
@@ -227,7 +227,7 @@ class RootController
 			}
 		}
 		if ($clear) {
-			apc_delete(new APCIterator('user', '/^' . $KEYNAME_PREFIX . '/'));
+			apcu_delete(new APCUIterator('/^' . $KEYNAME_PREFIX . '/'));
 		}
 		return $res;
 	}
