@@ -356,8 +356,17 @@ http {
         # This URL provides RTMP statistics in XML
         location /rtmp/stat {
             rtmp_stat all;
-            # Use this stylesheet to view XML as web page in browser
-            #rtmp_stat_stylesheet stat.xsl;
+
+            # Use this stylesheet to view XML as web page
+            # in browser
+            rtmp_stat_stylesheet stat.xsl;
+        }
+
+        location /rtmp/stat.xsl {
+            # XML stylesheet to view RTMP stats.
+            # Copy stat.xsl wherever you want
+            # and put the full directory path here
+            root html;
         }
     }
 
